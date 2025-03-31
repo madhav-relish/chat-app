@@ -15,7 +15,7 @@
 
 - [ x ] room.ts - Room Management
 - [ x ] message.ts - Messages handling
-- [ ] friend.ts - friend system
+- [ x ] friend.ts - friend system
 - [ ] presence.ts - online status
 
 

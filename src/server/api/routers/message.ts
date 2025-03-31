@@ -72,3 +72,20 @@ export const messageRouter = createTRPCRouter({
         }
     })
 })
+
+
+/*
+
+// Send a message
+await trpc.message.send.mutate({
+  roomId: "room_id",
+  text: "Hello everyone!",
+});
+
+// Get messages with pagination
+const { messages, nextCursor } = await trpc.message.list.query({
+  roomId: "room_id",
+  limit: 50,
+});
+
+*/
