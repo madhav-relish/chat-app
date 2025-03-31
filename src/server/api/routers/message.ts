@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { observable } from "@trpc/server/observable";
+import { eventEmitter, Events } from "~/server/ws/events";
 
+interface Message {
+    roomId: string
+}
 
 export const messageRouter = createTRPCRouter({
     sendMessage: protectedProcedure.input(z.object({
@@ -70,6 +75,22 @@ export const messageRouter = createTRPCRouter({
         return {
             messages, nextCursor
         }
+    }),
+
+    OnMessage: protectedProcedure.input(z.object({ roomId: z.string()})).subscription(({ ctx, input })=>{
+        return observable((emit)=>{
+            const onMessage = (message: Message)=>{
+                if(message.roomId === input.roomId){
+                    emit.next(message)
+                }
+            }
+
+            eventEmitter.on(Events.SEND_MESSAGE, onMessage)
+
+            return ()=>{
+                eventEmitter.off(Events.SEND_MESSAGE, onMessage)
+            }
+        })
     })
 })
 
