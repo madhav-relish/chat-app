@@ -2,9 +2,9 @@
 
 ## 1. Data Model Design
 
-- [ ] Room Model (chat rooms)
-- [ ] Message model
-- [ ] Friend Relationships
+- [ x ] Room Model (chat rooms)
+- [ x ] Message model
+- [ x ] Friend Relationships
 - [ ] User presence status
 
 ## 2. Auth
