@@ -10,6 +10,8 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import {type CreateNextContextOptions } from '@trpc/server/adapters/next';
+import { type CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -26,15 +28,29 @@ import { db } from "~/server/db";
  *
  * @see https://trpc.io/docs/server/context
  */
-export const createTRPCContext = async (opts: { headers: Headers }) => {
-	const session = await auth();
-
-	return {
+export const createContext = async (
+	opts: CreateNextContextOptions | CreateWSSContextFnOptions,
+  ) => {
+	// For WebSocket connections, we don't have headers
+	if (!('req' in opts)) {
+	  return {
 		db,
-		session,
-		...opts,
+		session: null, // You'll need to handle auth differently for WS
+	  };
+	}
+  
+	const session = await auth();
+  
+	return {
+	  db,
+	  session,
+	  ...('headers' in opts ? { headers: opts.headers } : {}),
 	};
-};
+  };
+
+export const createTRPCContext = async (opts: { headers: Headers }) => {
+	return await createContext({ ...opts } as unknown as CreateNextContextOptions);
+  };
 
 /**
  * 2. INITIALIZATION
