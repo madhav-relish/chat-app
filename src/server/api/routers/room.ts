@@ -6,7 +6,7 @@ export const roomRouter = createTRPCRouter({
     createRoom: protectedProcedure.input(z.object({
         name: z.string().optional(),
         isGroup: z.boolean(),
-        participants: z.array(z.string())
+        participants: z.array(z.string()).optional()
     })).mutation(async ({ ctx, input }) => {
         const { name, isGroup } = input
 
