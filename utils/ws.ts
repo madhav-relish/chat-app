@@ -3,8 +3,12 @@ import type { AppRouter } from "~/server/api/root";
 
 
 const wsClient = createWSClient({
-    url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001'
-})
+    url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
+    retryDelayMs: (attempt) => Math.min(attempt * 1000, 5000),
+    onClose() {
+      console.log('WebSocket connection closed');
+    },
+  });
 
 export const trpcLinks = [
     splitLink({
