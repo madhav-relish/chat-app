@@ -1,39 +1,20 @@
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import { WebSocketServer } from 'ws';
-import { type AppRouter, appRouter } from '../api/root';
+import { appRouter } from '../api/root';
 import { createContext } from '../api/trpc';
 
 const wss = new WebSocketServer({
-  port: 3001
+  port: 3001,
 });
 
-const handler = applyWSSHandler<AppRouter>({
+const handler = applyWSSHandler({
   wss,
   router: appRouter,
-  createContext,
+  createContext, // Use the updated createContext function
 });
 
-const pingInterval = setInterval(() => {
-  wss.clients.forEach((ws: any) => {
-    if (!ws.isAlive) {
-      console.log('Terminating stale connection');
-      return ws.terminate();
-    }
-    ws.isAlive = false;
-    console.log('Sending ping to client'); // ADD THIS LINE
-    ws.ping();
-  });
-}, 30000);
-
-wss.on('connection', (ws: any) => {
+wss.on('connection', (ws) => {
   console.log(`➕➕ Connection (${wss.clients.size})`);
-  ws.isAlive = true;
-
-  ws.on('pong', () => {
-    ws.isAlive = true;
-    console.log('Received pong from client'); // ADD THIS LINE
-  });
-
   ws.once('close', () => {
     console.log(`➖➖ Connection (${wss.clients.size})`);
   });
@@ -41,16 +22,8 @@ wss.on('connection', (ws: any) => {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received');
-  clearInterval(pingInterval);
   handler.broadcastReconnectNotification();
   wss.close();
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT received');
-  clearInterval(pingInterval);
-  wss.close();
-  process.exit();
 });
 
 console.log('✅ WebSocket Server listening on ws://localhost:3001');

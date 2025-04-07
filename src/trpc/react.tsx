@@ -24,6 +24,8 @@ const getQueryClient = () => {
 
 const wsClient = createWSClient({
 	url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
+	retryDelayMs: ()=>1000000,
+	
   });
 
 export const api = createTRPCReact<AppRouter>();

@@ -59,7 +59,7 @@ export const messageRouter = createTRPCRouter({
             take: limit + 1,
             cursor: cursor ? { id: cursor } : undefined,
             orderBy: {
-                createdAt: 'desc'
+                createdAt: 'asc'
             },
             include: {
                 sender: {

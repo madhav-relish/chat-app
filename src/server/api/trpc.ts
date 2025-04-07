@@ -15,7 +15,6 @@ import { type CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-
 /**
  * 1. CONTEXT
  *
@@ -31,24 +30,33 @@ import { db } from "~/server/db";
 export const createContext = async (
 	opts: CreateNextContextOptions | CreateWSSContextFnOptions,
   ) => {
-	// For WebSocket connections, we don't have headers
-	if (!('req' in opts)) {
-	  return {
-		db,
-		session: null, // You'll need to handle auth differently for WS
-	  };
-	}
-  
-	const session = await auth();
-  
+	let session = null;
+
+  // Handle HTTP request context
+  if ('req' in opts && opts.req) {
+    try {
+      session = await auth(); // Only call auth() in HTTP contexts
+    } catch (error) {
+      console.error("Error getting session:", error);
+    }
+  }
+
+  // Handle WebSocket context
+  if ('connection' in opts) {
+    console.log('WebSocket connection context created');
+  }
+
+  console.log('createContext for', session?.user?.name ?? 'unknown user');
+
 	return {
 	  db,
 	  session,
-	  ...('headers' in opts ? { headers: opts.headers } : {}),
 	};
   };
+  export type Context = Awaited<ReturnType<typeof createContext>>;
 
-export const createTRPCContext = async (opts: { headers: Headers }) => {
+  export const createTRPCContext = async (opts: { headers: Headers }) => {
+	
 	return await createContext({ ...opts } as unknown as CreateNextContextOptions);
   };
 
