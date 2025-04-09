@@ -93,7 +93,7 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
 
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
+    <div className="flex h-screen flex-col ">
       {/* Header */}
       <div className="border-b bg-black p-4 shadow-sm">
         <h2 className="text-lg font-semibold text-white">Chat Room: {roomId}</h2>
@@ -131,7 +131,7 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
 
       {/* Selected GIF preview */}
       {selectedGif && (
-        <div className="border-t bg-white p-2">
+        <div className="border-t  p-2">
           <div className="relative inline-block">
             <img
               src={selectedGif.images.fixed_height.url}
@@ -151,7 +151,7 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
       )}
 
       {/* Input area */}
-      <form onSubmit={handleSendMessage} className="border-t bg-white p-4">
+      <form onSubmit={handleSendMessage} className="border-t p-4">
         <div className="flex gap-2">
           <Button
             type="button"

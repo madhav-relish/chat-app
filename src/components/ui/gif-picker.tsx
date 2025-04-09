@@ -115,9 +115,9 @@ export function GifPicker({ onSelect, onClose }: GifPickerProps) {
           className="grid h-[400px] grid-cols-2 gap-2 overflow-y-auto"
           onScroll={handleScroll}
         >
-          {gifs.map((gif) => (
+          {gifs.map((gif, index) => (
             <div
-              key={gif.id}
+              key={index}
               className="cursor-pointer overflow-hidden rounded-md h-28 hover:opacity-80"
               onClick={() => onSelect(gif)}
             >
