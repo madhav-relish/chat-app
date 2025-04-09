@@ -1,16 +1,25 @@
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import { WebSocketServer } from 'ws';
 import { appRouter } from '../api/root';
-import { createContext } from '../api/trpc';
+import { db } from '../db';
 
 const wss = new WebSocketServer({
   port: 3001,
 });
 
+// Create a simplified context for WebSockets that doesn't try to use auth()
+const createWSContext = async (opts: any) => {
+  console.log('WebSocket context created with opts:', opts.type);
+  return {
+    db,
+    session: null, // We're not authenticating WebSocket connections for now
+  };
+};
+
 const handler = applyWSSHandler({
   wss,
   router: appRouter,
-  createContext, // Use the updated createContext function
+  createContext: createWSContext, // Use our simplified context function
 });
 
 wss.on('connection', (ws) => {

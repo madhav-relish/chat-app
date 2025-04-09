@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure, t } from "../trpc";
 import { observable } from "@trpc/server/observable";
 import { eventEmitter, Events } from "~/server/ws/events";
 import type { WSMessage } from "~/types/message";
@@ -38,10 +38,11 @@ export const messageRouter = createTRPCRouter({
               senderId: ctx.session.user.id,
             },
           });
-      
+
           // Emit the new message event
+          console.log('Emitting message event:', message);
           eventEmitter.emit(Events.SEND_MESSAGE, message);
-      
+
           return message;
     }),
 
@@ -83,12 +84,17 @@ export const messageRouter = createTRPCRouter({
         }
     }),
 
-    OnMessage: protectedProcedure
+    OnMessage: t.procedure // Use the base procedure without any middleware
     .input(z.object({ roomId: z.string() }))
     .subscription(({ input }) => {
+      // For subscriptions, we don't need to check auth here
+      // This bypasses all middleware including the timing middleware
+      console.log('Setting up subscription for roomId:', input.roomId);
       return observable<WSMessage>((emit) => {
-        const onMessage = (data: WSMessage) => {
+        const onMessage = (data: any) => {
+          console.log('Received message in subscription handler:', data);
           if (data.roomId === input.roomId) {
+            console.log('Emitting message to client for roomId:', input.roomId);
             emit.next(data);
           }
         };

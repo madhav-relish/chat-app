@@ -3,14 +3,18 @@ import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
-import { Send, ImageIcon } from "lucide-react"
+import { Send, ImageIcon, X } from "lucide-react"
 import { api } from '~/trpc/react'
 import type { WSMessage } from '~/types/message'
+import { GifPicker } from '~/components/ui/gif-picker'
+import type { GiphyGif } from '~/lib/giphy'
 
 const ChatRoom = ({ roomId }: { roomId: string }) => {
   const { data: session } = useSession()
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<WSMessage[]>([])
+  const [showGifPicker, setShowGifPicker] = useState(false)
+  const [selectedGif, setSelectedGif] = useState<GiphyGif | null>(null)
 
   // Query for initial messages
   const { data: initialMessages } = api.message.messageList.useQuery({
@@ -23,10 +27,14 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
     { roomId },
     {
       onData(data) {
-        setMessages((prev) => [...prev, data])
+        console.log('Received message from subscription:', data);
+        setMessages((prev) => [...prev, data]);
       },
       onError(err) {
-        console.error('Subscription error:', err)
+        console.error('Subscription error:', err);
+      },
+      onStarted() {
+        console.log('Subscription started for roomId:', roomId);
       },
     },
   )
@@ -51,16 +59,35 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!message.trim()) return
+    // Don't send if no text message and no GIF selected
+    if (!message.trim() && !selectedGif) return
 
     try {
-      await sendMessage.mutateAsync({
+      console.log('Sending message to roomId:', roomId);
+      const result = await sendMessage.mutateAsync({
         roomId,
-        text: message,
-      })
+        text: message.trim() || undefined,
+        gif: selectedGif ? selectedGif.images.downsized.url : undefined,
+      });
+      console.log('Message sent successfully:', result);
+
+      // Manually add the message to the UI for immediate feedback
+      // This ensures the message appears even if the subscription fails
+      if (result) {
+        setMessages(prev => [...prev, result as unknown as WSMessage]);
+      }
+
+      // Reset state after sending
+      setMessage("");
+      setSelectedGif(null);
     } catch (error) {
       console.error("Error while sending message", error)
     }
+  }
+
+  const handleGifSelect = (gif: GiphyGif) => {
+    setSelectedGif(gif);
+    setShowGifPicker(false);
   }
 
 
@@ -90,7 +117,7 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
               }`}
             >
               <div className="mb-1 text-xs opacity-75">
-                {msg.senderId === session?.user?.id ? 'You' : 'Other'} • 
+                {msg.senderId === session?.user?.id ? 'You' : 'Other'} •
                 {new Date(msg.createdAt).toLocaleTimeString()}
               </div>
               <p>{msg.text}</p>
@@ -102,10 +129,36 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
         ))}
       </div>
 
+      {/* Selected GIF preview */}
+      {selectedGif && (
+        <div className="border-t bg-white p-2">
+          <div className="relative inline-block">
+            <img
+              src={selectedGif.images.fixed_height.url}
+              alt="Selected GIF"
+              className="h-20 rounded-md"
+            />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute -right-2 -top-2 h-6 w-6 rounded-full"
+              onClick={() => setSelectedGif(null)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Input area */}
       <form onSubmit={handleSendMessage} className="border-t bg-white p-4">
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="icon">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setShowGifPicker(true)}
+          >
             <ImageIcon className="h-5 w-5" />
           </Button>
           <Input
@@ -114,11 +167,22 @@ const ChatRoom = ({ roomId }: { roomId: string }) => {
             placeholder="Type a message..."
             className="flex-1 text-black"
           />
-          <Button type="submit" disabled={!message.trim() || sendMessage.isPending}>
+          <Button
+            type="submit"
+            disabled={((!message.trim() && !selectedGif) || sendMessage.isPending)}
+          >
             <Send className="h-5 w-5" />
           </Button>
         </div>
       </form>
+
+      {/* GIF Picker Modal */}
+      {showGifPicker && (
+        <GifPicker
+          onSelect={handleGifSelect}
+          onClose={() => setShowGifPicker(false)}
+        />
+      )}
     </div>
   )
 }

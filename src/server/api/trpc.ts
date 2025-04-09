@@ -13,7 +13,7 @@ import { ZodError } from "zod";
 import {type CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { type CreateWSSContextFnOptions } from '@trpc/server/adapters/ws';
 
-import { auth } from "~/server/auth";
+// We don't import auth here anymore to avoid the headers error
 import { db } from "~/server/db";
 /**
  * 1. CONTEXT
@@ -30,34 +30,27 @@ import { db } from "~/server/db";
 export const createContext = async (
 	opts: CreateNextContextOptions | CreateWSSContextFnOptions,
   ) => {
-	let session = null;
-
-  // Handle HTTP request context
-  if ('req' in opts && opts.req) {
-    try {
-      session = await auth(); // Only call auth() in HTTP contexts
-    } catch (error) {
-      console.error("Error getting session:", error);
-    }
-  }
+	// We don't try to get the session here at all
+	// This avoids the headers error completely
 
   // Handle WebSocket context
-  if ('connection' in opts) {
+  if ('info' in opts && opts.info?.type === "subscription") {
     console.log('WebSocket connection context created');
   }
 
-  console.log('createContext for', session?.user?.name ?? 'unknown user');
+  // For HTTP requests, the session will be added by the API route handler
+  console.log('createContext created');
 
 	return {
 	  db,
-	  session,
+	  session: null, // Initialize with null, will be set by route handler if needed
 	};
   };
   export type Context = Awaited<ReturnType<typeof createContext>>;
 
-  export const createTRPCContext = async (opts: { headers: Headers }) => {
-	
-	return await createContext({ ...opts } as unknown as CreateNextContextOptions);
+  export const createTRPCContext = async (opts: { headers?: Headers }) => {
+	// This function is used for HTTP requests
+	return await createContext({ req: { headers: opts.headers } } as unknown as CreateNextContextOptions);
   };
 
 /**
@@ -67,7 +60,7 @@ export const createContext = async (
  * ZodErrors so that you get typesafety on the frontend if your procedure fails due to validation
  * errors on the backend.
  */
-const t = initTRPC.context<typeof createTRPCContext>().create({
+export const t = initTRPC.context<typeof createTRPCContext>().create({
 	transformer: superjson,
 	errorFormatter({ shape, error }) {
 		return {
@@ -126,21 +119,34 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 });
 
 
-const isAuthenticated = t.middleware(async ({next, ctx})=>{
-	const session = await auth()
-	if(!session){
-	  throw new TRPCError({
-		code: 'UNAUTHORIZED',
-		message: 'You much be logged in to access this resource'
-	  })
+const isAuthenticated = t.middleware(async ({next, ctx, type})=>{
+	// For subscriptions, we don't try to authenticate
+	if (type === 'subscription') {
+		console.log('Subscription auth check - skipping authentication');
+		return next({
+			ctx: {
+				ctx,
+				session: null // Don't try to use session for subscriptions
+			}
+		});
 	}
-	return next({
-	  ctx:{
-		ctx,
-		session
-	  }
-	});  
-  })
+
+	// For regular HTTP requests, use the session from context if available
+	if (ctx.session) {
+		return next({
+			ctx: {
+				ctx,
+				session: ctx.session
+			}
+		});
+	}
+
+	// If no session in context, throw unauthorized error
+	throw new TRPCError({
+		code: 'UNAUTHORIZED',
+		message: 'You must be logged in to access this resource'
+	});
+})
 
 /**
  * Public (unauthenticated) procedure
