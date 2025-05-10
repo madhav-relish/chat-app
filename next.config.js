@@ -5,6 +5,12 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+    publicRuntimeConfig: {
+        // Will be available on both server and client
+        APP_URL: process.env.APP_URL || "http://localhost:3000",
+        WS_URL: process.env.WS_URL || "ws://localhost:3001",
+      },
+};
 
 export default config;

@@ -1,23 +1,26 @@
-import Link from "next/link";
 
-import { LatestPost } from "~/app/_components/post";
-import { Button } from "~/components/ui/button";
+import CreateOrJoinRoomComponent from "~/components/create-join-room";
+
 import { auth } from "~/server/auth";
 import { HydrateClient, api } from "~/trpc/server";
 
 export default async function Home() {
-	const hello = await api.post.hello({ text: "from tRPC" });
-	const session = await auth();
+  const session = await auth();
 
-	if (session?.user) {
-		void api.post.getLatest.prefetch();
-	}
+  if(!session){
+	return <div>...Loading</div>
+  }
 
-	return (
-		<HydrateClient>
-			<main>
-				<Button className="" variant={"default"}>Hi there</Button>
-			</main>
-		</HydrateClient>
-	);
+  if (session?.user) {
+    void api.post.getLatest.prefetch();
+  }
+
+  console.log(session)
+  return (
+    <HydrateClient>
+      <main className="w-full h-screen flex flex-col justify-center items-center">
+			<CreateOrJoinRoomComponent/>
+      </main>
+    </HydrateClient>
+  );
 }
